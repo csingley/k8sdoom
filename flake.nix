@@ -4,9 +4,13 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    psdoom-src = {
+      url = "github:keymon/psdoom-ng";
+      flake = false;
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-parts, psdoom-src, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       perSystem = { config, self', inputs', pkgs, system, ... }: {
@@ -22,10 +26,11 @@
             pkgs.automake 
             pkgs.git 
             pkgs.unzip 
+            pkgs.cmake
           ];
           
           buildInputs = [ 
-            pkgs.SDL 
+            pkgs.SDL2
             pkgs.SDL_mixer 
             pkgs.SDL_net 
             pkgs.kubectl 
@@ -33,7 +38,12 @@
           ];
 
           buildPhase = ''
-            # We use the existing Makefile logic but Nix provides the deps
+            # Link the pre-fetched source into the expected build directory
+            mkdir -p build_tmp
+            cp -r ${psdoom-src} build_tmp/psdoom-ng
+            chmod -R +w build_tmp/psdoom-ng
+
+            # Build using Nix-provided dependencies
             make build FORCE_VENDORED=0
           '';
 

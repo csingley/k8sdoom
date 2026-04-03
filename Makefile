@@ -100,6 +100,8 @@ $(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
 
 build: $(SDL_DEP) $(MIXER_DEP) $(NET_DEP)
 	@if [ ! -d "$(BUILD_DIR)/psdoom-ng" ]; then \
+		echo "Cloning psdoom-ng..."; \
+		mkdir -p $(BUILD_DIR); \
 		git clone $(PSDOOM_REPO) $(BUILD_DIR)/psdoom-ng; \
 	fi
 	@if [ ! -f "$(BUILD_DIR)/psdoom-ng/.patched" ]; then \
