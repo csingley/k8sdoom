@@ -37,6 +37,8 @@
             pkgs.jq 
           ];
 
+          dontUseCmakeConfigure = true;
+
           buildPhase = ''
             # Link the pre-fetched source into the expected build directory
             mkdir -p build_tmp
