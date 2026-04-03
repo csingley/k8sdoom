@@ -1,5 +1,7 @@
 # k8sdoom 🔫☸️
 
+Dedicated to the memory of David Emory Watson, computer scientist.
+
 **k8sdoom** is a gamified Kubernetes administration tool that lets you manage your cluster by playing Doom. It turns your Kubernetes nodes into interactive monsters, allowing you to perform administrative tasks like tainting and draining nodes through retro-FPS gameplay.
 
 Based on [psdoom-ng](https://github.com/keymon/psdoom-ng), this version has been specifically modified for Kubernetes and packaged for modern, distro-agnostic use.
