@@ -24,34 +24,34 @@ VENDORED_PREFIX = $(BUILD_DIR)/deps_install
 FORCE_VENDORED ?= 0
 
 ifeq ($(FORCE_VENDORED),0)
+    # Search for system libraries
     SYS_SDL_CONFIG := $(shell command -v sdl-config 2>/dev/null)
     SYS_MIXER := $(shell pkg-config --exists SDL_mixer 2>/dev/null && echo yes)
     SYS_NET := $(shell pkg-config --exists SDL_net 2>/dev/null && echo yes)
 endif
 
-# Determine targets and variables
+# If anything is missing, we must use the vendored path for the binary
 ifeq ($(SYS_SDL_CONFIG),)
-    SDL_TARGET = $(VENDORED_PREFIX)/bin/sdl-config
     SDL_CONFIG = $(VENDORED_PREFIX)/bin/sdl-config
+    SDL_DEP = $(VENDORED_PREFIX)/bin/sdl-config
 else
-    SDL_TARGET = 
     SDL_CONFIG = $(SYS_SDL_CONFIG)
+    SDL_DEP = 
 endif
 
 ifeq ($(SYS_MIXER),)
-    MIXER_TARGET = $(VENDORED_PREFIX)/lib/libSDL_mixer.a
+    MIXER_DEP = $(VENDORED_PREFIX)/lib/libSDL_mixer.a
 else
-    MIXER_TARGET = 
+    MIXER_DEP = 
 endif
 
 ifeq ($(SYS_NET),)
-    NET_TARGET = $(VENDORED_PREFIX)/lib/libSDL_net.a
+    NET_DEP = $(VENDORED_PREFIX)/lib/libSDL_net.a
 else
-    NET_TARGET = 
+    NET_DEP = 
 endif
 
-# Environment for building missing dependencies
-# We ONLY use these when building vendored stuff
+# Common environment for all build steps
 VENDORED_ENV = PATH=$(VENDORED_PREFIX)/bin:$(PATH) \
                PKG_CONFIG_PATH=$(VENDORED_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH) \
                LDFLAGS="-L$(VENDORED_PREFIX)/lib $(LDFLAGS)" \
@@ -59,7 +59,7 @@ VENDORED_ENV = PATH=$(VENDORED_PREFIX)/bin:$(PATH) \
 
 .PHONY: all build install uninstall clean check-tools
 
-all: check-tools $(SDL_TARGET) $(MIXER_TARGET) $(NET_TARGET) build
+all: check-tools $(SDL_DEP) $(MIXER_DEP) $(NET_DEP) build
 
 check-tools:
 	@command -v kubectl >/dev/null 2>&1 || (echo "ERROR: kubectl not found." && exit 1)
@@ -69,29 +69,39 @@ check-tools:
 
 # --- Vendored Dependency Targets ---
 
-$(VENDORED_PREFIX)/bin/sdl-config: | $(BUILD_DIR)
+# SDL 1.2
+$(VENDORED_PREFIX)/bin/sdl-config:
 	@echo "Building vendored SDL 1.2..."
-	@mkdir -p $(VENDORED_PREFIX)
+	@mkdir -p $(BUILD_DIR) $(VENDORED_PREFIX)
+	@rm -rf $(BUILD_DIR)/SDL-1.2.15
 	@curl -L $(SDL_URL) | tar xz -C $(BUILD_DIR)
 	@cd $(BUILD_DIR)/SDL-1.2.15 && ./configure --prefix=$(VENDORED_PREFIX) --disable-video-x11 && $(MAKE) install
+	@if [ ! -f "$@" ]; then echo "ERROR: SDL build failed to produce $@" && exit 1; fi
 
-$(VENDORED_PREFIX)/lib/libSDL_mixer.a: $(SDL_TARGET) | $(BUILD_DIR)
+# SDL_mixer
+$(VENDORED_PREFIX)/lib/libSDL_mixer.a: $(SDL_DEP)
 	@echo "Building vendored SDL_mixer..."
-	@mkdir -p $(VENDORED_PREFIX)
+	@mkdir -p $(BUILD_DIR) $(VENDORED_PREFIX)
+	@rm -rf $(BUILD_DIR)/SDL_mixer-1.2.12
 	@curl -L $(SDL_MIXER_URL) | tar xz -C $(BUILD_DIR)
 	@cd $(BUILD_DIR)/SDL_mixer-1.2.12 && $(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) && $(MAKE) install
+	@if [ ! -f "$@" ]; then echo "ERROR: SDL_mixer build failed to produce $@" && exit 1; fi
 
-$(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_TARGET) | $(BUILD_DIR)
+# SDL_net
+$(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
 	@echo "Building vendored SDL_net..."
-	@mkdir -p $(VENDORED_PREFIX)
+	@mkdir -p $(BUILD_DIR) $(VENDORED_PREFIX)
+	@rm -rf $(BUILD_DIR)/SDL_net-1.2.8
 	@curl -L $(SDL_NET_URL) | tar xz -C $(BUILD_DIR)
 	@cd $(BUILD_DIR)/SDL_net-1.2.8 && $(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) && $(MAKE) install
+	@if [ ! -f "$@" ]; then echo "ERROR: SDL_net build failed to produce $@" && exit 1; fi
 
 # --- Main Build Target ---
 
-build: $(BUILD_DIR)
+build:
 	@if [ ! -d "$(BUILD_DIR)/psdoom-ng" ]; then \
 		echo "Cloning psdoom-ng..."; \
+		mkdir -p $(BUILD_DIR); \
 		git clone $(PSDOOM_REPO) $(BUILD_DIR)/psdoom-ng; \
 	fi
 	@if [ ! -f "$(BUILD_DIR)/psdoom-ng/.patched" ]; then \
@@ -100,11 +110,8 @@ build: $(BUILD_DIR)
 	fi
 	@echo "Building psdoom-ng (SDL_CONFIG=$(SDL_CONFIG))..."
 	@cd $(BUILD_DIR)/psdoom-ng/trunk && \
-		$(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) SDL_CONFIG=$(SDL_CONFIG) && \
+		$(VENDORED_ENV) ./configure --prefix=$(PREFIX) SDL_CONFIG=$(SDL_CONFIG) && \
 		$(MAKE)
-
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
 
 # --- Assets ---
 
