@@ -114,7 +114,8 @@ $(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
 
 # --- Main Build Target ---
 
-build:
+# build must depend on the libraries it needs
+build: $(SDL_DEP) $(MIXER_DEP) $(NET_DEP)
 	@if [ ! -d "$(BUILD_DIR)/psdoom-ng" ]; then \
 		echo "Cloning psdoom-ng..."; \
 		mkdir -p $(BUILD_DIR); \
