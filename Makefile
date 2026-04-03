@@ -52,10 +52,13 @@ else
 endif
 
 # Common environment for all build steps
+# We use these both as env vars and as explicit configure arguments
+V_LDFLAGS = -L$(VENDORED_PREFIX)/lib $(LDFLAGS)
+V_CPPFLAGS = -I$(VENDORED_PREFIX)/include $(CPPFLAGS)
 VENDORED_ENV = PATH=$(VENDORED_PREFIX)/bin:$(PATH) \
                PKG_CONFIG_PATH=$(VENDORED_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH) \
-               LDFLAGS="-L$(VENDORED_PREFIX)/lib $(LDFLAGS)" \
-               CPPFLAGS="-I$(VENDORED_PREFIX)/include $(CPPFLAGS)"
+               LDFLAGS="$(V_LDFLAGS)" \
+               CPPFLAGS="$(V_CPPFLAGS)"
 
 .PHONY: all build install uninstall clean check-tools
 
@@ -84,7 +87,7 @@ $(VENDORED_PREFIX)/lib/libSDL_mixer.a: $(SDL_DEP)
 	@mkdir -p $(BUILD_DIR) $(VENDORED_PREFIX)
 	@rm -rf $(BUILD_DIR)/SDL_mixer-1.2.12
 	@curl -L $(SDL_MIXER_URL) | tar xz -C $(BUILD_DIR)
-	@cd $(BUILD_DIR)/SDL_mixer-1.2.12 && $(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) && $(MAKE) install
+	@cd $(BUILD_DIR)/SDL_mixer-1.2.12 && $(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && $(MAKE) install
 	@if [ ! -f "$@" ]; then echo "ERROR: SDL_mixer build failed to produce $@" && exit 1; fi
 
 # SDL_net
@@ -93,7 +96,7 @@ $(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
 	@mkdir -p $(BUILD_DIR) $(VENDORED_PREFIX)
 	@rm -rf $(BUILD_DIR)/SDL_net-1.2.8
 	@curl -L $(SDL_NET_URL) | tar xz -C $(BUILD_DIR)
-	@cd $(BUILD_DIR)/SDL_net-1.2.8 && $(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) && $(MAKE) install
+	@cd $(BUILD_DIR)/SDL_net-1.2.8 && $(VENDORED_ENV) ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && $(MAKE) install
 	@if [ ! -f "$@" ]; then echo "ERROR: SDL_net build failed to produce $@" && exit 1; fi
 
 # --- Main Build Target ---
@@ -110,7 +113,7 @@ build:
 	fi
 	@echo "Building psdoom-ng (SDL_CONFIG=$(SDL_CONFIG))..."
 	@cd $(BUILD_DIR)/psdoom-ng/trunk && \
-		$(VENDORED_ENV) ./configure --prefix=$(PREFIX) SDL_CONFIG=$(SDL_CONFIG) && \
+		$(VENDORED_ENV) ./configure --prefix=$(PREFIX) SDL_CONFIG=$(SDL_CONFIG) LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && \
 		$(MAKE)
 
 # --- Assets ---
