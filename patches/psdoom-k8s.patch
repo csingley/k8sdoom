@@ -1,0 +1,346 @@
+diff --git a/trunk/src/p_inter.c b/trunk/src/p_inter.c
+index d031102..641f455 100644
+--- a/trunk/src/p_inter.c
++++ b/trunk/src/p_inter.c
+@@ -690,7 +690,7 @@ P_KillMobj
+ // removing the monster from the game engine now.)
+     if (target->m_pid != 0 && target->m_del_from_pid_list == true) {
+        fprintf(stderr, "kill process %d\n", target->m_pid);
+-       pr_kill(target->m_pid);
++       pr_kill(target);
+ 
+        target->m_draw_pid_info = false; /* set to false so corpse
+                                            doesn't have pid      */
+@@ -985,7 +985,7 @@ if (source != NULL )
+ // That behavior slowed things down a lot.
+           if (damage) {
+              fprintf(stderr, "renice process %d\n", target->m_pid);
+-             pr_renice(target->m_pid);
++             pr_renice(target);
+           }
+        }
+     }
+diff --git a/trunk/src/p_mobj.h b/trunk/src/p_mobj.h
+index 0789754..84fffa2 100644
+--- a/trunk/src/p_mobj.h
++++ b/trunk/src/p_mobj.h
+@@ -290,7 +290,7 @@ typedef struct mobj_s
+ // *** PID BEGIN ***
+     // the process id (0 if not a process)
+     int                 m_pid;
+-    char                m_pname[8];
++    char                m_pname[64];
+ 
+     // Need more variables for advanced process management:
+ 
+diff --git a/trunk/src/pr_process.c b/trunk/src/pr_process.c
+index fa4fe83..bec4bc8 100644
+--- a/trunk/src/pr_process.c
++++ b/trunk/src/pr_process.c
+@@ -38,10 +38,10 @@ void P_KillMobj(mobj_t *source, mobj_t *target); /* from p_inter.c */
+ 
+ // This routine does quite a bit of stuff.  See the description later
+ // in this file.
+-void add_to_pid_list(int pid, const char *name, int demon);
++void add_to_pid_list(int pid, const char *name, int type);
+ 
+ // Need to return the newly created mobj_t from this routine now.
+-mobj_t *add_new_process(int pid, const char *pname, int demon);
++mobj_t *add_new_process(int pid, const char *pname, int type);
+ 
+ // This routine is called for custom level processing only.
+ // It guarantees the mt_ext.x and mt_ext.y are at least
+@@ -94,7 +94,7 @@ void pr_check(void) {
+   int pid = 0;
+   char namebuf[256];
+   char tty[256];
+-  int demon = false;
++  int type = 0;
+   char *custompscmd = NULL;
+ 
+ // Bypass the 'ps' part of the program entirely if it's an add-on pack
+@@ -140,12 +140,12 @@ void pr_check(void) {
+     /* Read in all process information. */
+     while (fgets(buf, 255, f)) {
+        int read_fields = sscanf(buf, "%s %d %s %d",
+-             username, &pid, namebuf, &demon);
++             username, &pid, namebuf, &type);
+        if (read_fields == 4 && username && namebuf) {
+          // Check for username validity before adding to pid list.
+          if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
+               !(in_ps_userlist(psnotuser_list_head, username)) ) {
+-            add_to_pid_list(pid, namebuf, demon);
++            add_to_pid_list(pid, namebuf, type);
+          }
+        } else {
+         fprintf(stderr, "ERROR: can not parse '%s'\n", buf);
+@@ -184,15 +184,15 @@ root       334  0.0  1.2   848   476   2 R    20:06   0:00 ps h a x u OT
+          // Check for username validity before adding to pid list.
+          if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
+               !(in_ps_userlist(psnotuser_list_head, username)) ) {
+-            add_to_pid_list(pid, namebuf, demon);
++            add_to_pid_list(pid, namebuf, type);
+          }
+       }
+       sscanf(buf, "%s %d %*f %*f %*d %*d %s %*4c %*s %*s %s",
+             username, &pid,              tty,            namebuf);
+       if (tty[0]=='?')  /* if there is no tty, then it is a daemon */
+-        demon = true;
++        type = 1;
+       else
+-        demon = false;
++        type = 0;
+     }
+     pclose(f);
+ 
+@@ -234,13 +234,13 @@ root    321   2  -bash
+       sscanf(buf, "%s %d %s %s",
+                    username, &pid, tty, namebuf);
+       if (tty[0]=='?')  /* if there is no tty, then it is a daemon */
+-        demon = true;
++        type = 1;
+       else
+-        demon = false;
++        type = 0;
+       // Check for username validity before adding to pid list.
+       if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
+            !(in_ps_userlist(psnotuser_list_head, username)) ) {
+-         add_to_pid_list(pid, namebuf, demon);
++         add_to_pid_list(pid, namebuf, type);
+       }
+     }
+     pclose(f);
+@@ -262,15 +262,15 @@ root    321   2  -bash
+          // Check for username validity before adding to pid list.
+          if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
+               !(in_ps_userlist(psnotuser_list_head, username)) ) {
+-            add_to_pid_list(pid, namebuf, demon);
++            add_to_pid_list(pid, namebuf, type);
+          }
+       }
+       sscanf(buf, "%s %d %*f %*f %*d %*d %s %*4c %*s %*s %s",
+             username, &pid,              tty,            namebuf);
+       if (tty[0]=='?')  /* if there is no tty, then it is a daemon */
+-        demon = true;
++        type = 1;
+       else
+-        demon = false;
++        type = 0;
+     }
+ 
+     pclose(f);
+@@ -298,7 +298,7 @@ root    321   2  -bash
+ // the archvile does (because the process didn't really die).
+ // If we can't resurrect it in that case, remove the body and spawn
+ // a new monster.
+-void add_to_pid_list(int pid, const char *name, int demon) {
++void add_to_pid_list(int pid, const char *name, int type) {
+ 
+    mobj_t	*new_mobj = NULL;
+    int		name_length = 0;
+@@ -308,7 +308,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+ // pid currently in the list, spawn the mobj and link it as the tail
+ // of the list if we placed it on the map without a collision.
+    if ( pid_list_tail && pid > pid_list_tail->m_pid ) {
+-      if ( (new_mobj = add_new_process(pid, name, demon)) != NULL ) {
++      if ( (new_mobj = add_new_process(pid, name, type)) != NULL ) {
+          new_mobj->ppid = pid_list_tail;
+          new_mobj->npid = NULL;
+          pid_list_tail->npid = new_mobj;
+@@ -319,7 +319,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+ // pid currently in the list, spawn the mobj and link it as the head
+ // of the list if we placed it on the map without a collision.
+    } else if ( pid_list_head && pid < pid_list_head->m_pid ) {
+-      if ( (new_mobj = add_new_process(pid, name, demon)) != NULL ) {
++      if ( (new_mobj = add_new_process(pid, name, type)) != NULL ) {
+          new_mobj->ppid = NULL;
+          new_mobj->npid = pid_list_head;
+          pid_list_head->ppid = new_mobj;
+@@ -357,17 +357,8 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+             pid_list_pos->m_del_from_pid_list = false;
+ 
+             // copy the incoming pid's name over the mobj's name
+-            // in case an exec() was called by the process.
+-            // ie. mingetty --> bash
+-// TODO: Make name change conditional?  Or is memcpy() fast enough
+-//       that we can do it every time?
+-            name_length = strlen( name );
+-            if ( name_length <= 7 ) {
+-               memcpy(pid_list_pos->m_pname, name, 8);
+-            }
+-            else {
+-               memcpy(pid_list_pos->m_pname, name + name_length - 7, 8);
+-            }
++            strncpy(pid_list_pos->m_pname, name, 63);
++            pid_list_pos->m_pname[63] = '\0';
+ 
+             // if the process is still running on the machine, but
+             // the mobj has been killed in Doom (ie. the process
+@@ -416,7 +407,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+                   cleanup_pid_list(pid_list_pos);
+ 
+                   // try to respawn monster
+-                  add_to_pid_list(pid, name, demon);
++                  add_to_pid_list(pid, name, type);
+ 
+                } else {  // we can raise the monster's body
+ 
+@@ -447,7 +438,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+          } else {  // the read-in pid is smaller than the currently
+                    // pointed to mobj.  spawn a new mobj and link it
+                    // into the list if it is placed without a collision.
+-            if ( (new_mobj = add_new_process(pid, name, demon)) != NULL ) {
++            if ( (new_mobj = add_new_process(pid, name, type)) != NULL ) {
+                new_mobj->ppid = pid_list_pos->ppid;
+                new_mobj->npid = pid_list_pos;
+                pid_list_pos->ppid->npid = new_mobj;
+@@ -457,7 +448,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+          }
+       } else {  // empty list.  spawn the mobj and make it the only
+                 // member of the list if it is placed without a collision.
+-         if ( (new_mobj = add_new_process(pid, name, demon)) != NULL ) {
++         if ( (new_mobj = add_new_process(pid, name, type)) != NULL ) {
+             pid_list_head = pid_list_tail = new_mobj;
+             new_mobj->npid = new_mobj->ppid = NULL;
+             new_mobj->m_del_from_pid_list = false;
+@@ -568,7 +559,7 @@ void cleanup_pid_list(mobj_t *del_mobj) {
+ // Need to return the newly created mobj_t from this routine, or
+ // NULL if the monster couldn't be spawned due to collisions.
+ //
+-mobj_t *add_new_process(int pid, const char *pname, int demon) {
++mobj_t *add_new_process(int pid, const char *pname, int type) {
+ 
+     mapthing_t	mt_ext;
+ 
+@@ -598,17 +589,24 @@ mobj_t *add_new_process(int pid, const char *pname, int demon) {
+ // Only assigned >= 0 if on a custom level.
+     short		box_num = -1;
+ 
++    mobjtype_t mtype;
++
+     /* make sure the unused data is zero */
+     memset((void*)&mt_ext, 0, sizeof(mt_ext));
+ 
+-    if (demon){
+-      mt_ext.type = mobjinfo[MT_SERGEANT].doomednum;  // demon, the pink dudes
+-      monster_radius = mobjinfo[MT_SERGEANT].radius>>FRACBITS;
+-    } else {
+-      mt_ext.type = mobjinfo[MT_SHOTGUY].doomednum;  // sarge, with the shotguns
+-      monster_radius = mobjinfo[MT_SHOTGUY].radius>>FRACBITS;
++    switch (type) {
++      case 0: mtype = MT_SHOTGUY; break;
++      case 1: mtype = MT_SERGEANT; break;
++      case 2: mtype = MT_TROOP; break;
++      case 3: mtype = MT_HEAD; break;
++      case 4: mtype = MT_KNIGHT; break;
++      case 5: mtype = MT_VILE; break;
++      default: mtype = MT_POSSESSED; break;
+     }
+ 
++    mt_ext.type = mobjinfo[mtype].doomednum;
++    monster_radius = mobjinfo[mtype].radius>>FRACBITS;
++
+     //mt_ext.flags = 7;
+     //mt_ext.flags |= (MTF_SINGLE | MTF_COOPERATIVE | MTF_DEATHMATCH);
+ 
+@@ -736,17 +734,10 @@ mobj_t *add_new_process(int pid, const char *pname, int demon) {
+ 	}
+ 
+ // If we spawned the monster without collisions
+-    if ( pid_mobj != NULL ) {
++    if (pid_mobj != NULL) {
+ 
+-// Want the last 7 chars of the process name, not the first 7.
+-// ie: '/sbin/mingetty' is shown as 'ingetty' rather than '/sbin/m'
+-       pname_length = strlen( pname );
+-       if ( pname_length <= 7 ) {
+-          memcpy(pid_mobj->m_pname, pname, 8);
+-       }
+-       else {
+-          memcpy(pid_mobj->m_pname, pname + pname_length - 7, 8);
+-       }
++       strncpy(pid_mobj->m_pname, pname, 63);
++       pid_mobj->m_pname[63] = '\0';
+ 
+        pid_mobj->m_pid = pid;
+ 
+@@ -861,7 +852,7 @@ boolean in_ps_userlist(ps_userlist_t *list_head, char *username) {
+ 
+ // pr_kill
+ // kills the process
+-void pr_kill(int pid) {
++void pr_kill(mobj_t *mobj) {
+   char buf[256];
+   char *cmd;
+ // If -nopsact was on the command line, don't actually kill the process
+@@ -869,15 +860,15 @@ void pr_kill(int pid) {
+      return;
+   }
+   if ((cmd = getenv("PSDOOMKILLCMD")) == NULL) {
+-    cmd = "kill -9";
++    cmd = "kubectl drain --force --ignore-daemonsets --delete-local-data";
+   }
+-  sprintf(buf, "%s %d", cmd, pid);
++  sprintf(buf, "%s %s", cmd, mobj->m_pname);
+   system(buf);
+ }
+ 
+ // pr_renice
+ // renices the process
+-void pr_renice(int pid) {
++void pr_renice(mobj_t *mobj) {
+   char buf[256];
+   char *cmd;
+ // If -nopsact was on the command line, don't actually re-nice the process
+@@ -885,8 +876,10 @@ void pr_renice(int pid) {
+      return;
+   }
+   if ((cmd = getenv("PSDOOMRENICECMD")) == NULL) {
+-    cmd = "renice +5 -9";
++    cmd = "kubectl taint nodes --overwrite psdoom=taint:NoSchedule";
+   }
+-  sprintf(buf, "%s %d", cmd, pid);
++  // This command format might need to be different if node name is not at the end
++  // but let's assume it is for now, or the user can override with environment variable.
++  sprintf(buf, "%s %s", cmd, mobj->m_pname);
+   system(buf);
+ }
+diff --git a/trunk/src/pr_process.h b/trunk/src/pr_process.h
+index 3bae869..a127307 100644
+--- a/trunk/src/pr_process.h
++++ b/trunk/src/pr_process.h
+@@ -36,6 +36,6 @@ typedef enum
+ // Functions
+ void pr_check(void);
+ void cleanup_pid_list(mobj_t *del_mobj);
+-void pr_kill(int pid);
+-void pr_renice(int pid);
++void pr_kill(mobj_t *mobj);
++void pr_renice(mobj_t *mobj);
+ void add_to_ps_userlist(ps_userlist_type_t listtype, char *username);
+diff --git a/trunk/src/r_defs.h b/trunk/src/r_defs.h
+index e4381a2..97594ea 100644
+--- a/trunk/src/r_defs.h
++++ b/trunk/src/r_defs.h
+@@ -413,7 +413,7 @@ typedef struct vissprite_s
+ // *** PID BEGIN ***
+     // the process id (0 if not a process)
+     int                 m_pid;
+-    char                m_pname[8];
++    char                m_pname[64];
+ 
+     // Need another variable for advanced process management:
+     // A flag to tell whether to draw the pid info.
+diff --git a/trunk/src/r_things.c b/trunk/src/r_things.c
+index e60ec34..3e2fbe9 100644
+--- a/trunk/src/r_things.c
++++ b/trunk/src/r_things.c
+@@ -643,7 +643,7 @@ void R_ProjectSprite (mobj_t* thing)
+ // *** PID BEGIN ***
+ // Set the pid and name in the vissprite.
+     vis->m_pid = thing->m_pid;
+-    memcpy(vis->m_pname, thing->m_pname, 8);
++    memcpy(vis->m_pname, thing->m_pname, 64);
+ // Also set flag that tells whether to draw the pid info or not.
+     vis->m_draw_pid_info = thing->m_draw_pid_info;
+ // *** PID END ***
