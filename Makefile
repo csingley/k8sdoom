@@ -18,7 +18,7 @@ SDL_NET_URL = https://www.libsdl.org/projects/SDL_net/release/SDL_net-1.2.8.tar.
 
 # Build paths
 BUILD_DIR = $(shell pwd)/build_tmp
-VENDORED_PREFIX = $(BUILD_DIR)/deps_install
+VENDORED_PREFIX = $(shell pwd)/build_tmp/deps_install
 
 # --- Dependency Detection ---
 FORCE_VENDORED ?= 0
@@ -127,9 +127,10 @@ build: $(SDL_DEP) $(MIXER_DEP) $(NET_DEP)
 	fi
 	@echo "Building psdoom-ng (SDL_CONFIG=$(SDL_CONFIG))..."
 	@cd $(BUILD_DIR)/psdoom-ng/trunk && \
-		PATH=$(PATH_INTERNAL) \
-		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH_INTERNAL) \
-		./configure --prefix=$(PREFIX) SDL_CONFIG=$(SDL_CONFIG) \
+		PATH="$(PATH_INTERNAL)" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH_INTERNAL)" \
+		SDL_CONFIG="$(SDL_CONFIG)" \
+		./configure --prefix="$(PREFIX)" \
 		LDFLAGS="$(LDFLAGS_INTERNAL)" CPPFLAGS="$(CPPFLAGS_INTERNAL)" \
 		LIBS="-lSDL_mixer -lSDL_net" && \
 		$(MAKE)
