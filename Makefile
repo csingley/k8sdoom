@@ -113,7 +113,9 @@ build:
 	fi
 	@echo "Building psdoom-ng (SDL_CONFIG=$(SDL_CONFIG))..."
 	@cd $(BUILD_DIR)/psdoom-ng/trunk && \
-		$(VENDORED_ENV) ./configure --prefix=$(PREFIX) SDL_CONFIG=$(SDL_CONFIG) LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && \
+		$(VENDORED_ENV) ./configure --prefix=$(PREFIX) SDL_CONFIG=$(SDL_CONFIG) \
+		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" \
+		LIBS="-lSDL_mixer -lSDL_net" && \
 		$(MAKE)
 
 # --- Assets ---
