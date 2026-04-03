@@ -21,8 +21,6 @@ BUILD_DIR = $(shell pwd)/build_tmp
 VENDORED_PREFIX = $(BUILD_DIR)/deps_install
 
 # --- Dependency Detection Logic ---
-# Check if we should use system-provided dependencies
-# Set FORCE_VENDORED=1 to ignore system libs
 FORCE_VENDORED ?= 0
 
 ifeq ($(FORCE_VENDORED),0)
@@ -33,7 +31,7 @@ ifeq ($(FORCE_VENDORED),0)
     SYS_NET := $(shell pkg-config --exists SDL_net 2>/dev/null && echo yes)
 endif
 
-# Determine if we need to build local versions
+# Flags to track what needs building
 NEED_VENDORED_SDL = 0
 NEED_VENDORED_MIXER = 0
 NEED_VENDORED_NET = 0
@@ -48,19 +46,24 @@ ifeq ($(SYS_NET),)
     NEED_VENDORED_NET = 1
 endif
 
-# Configure build environment based on detection
-ifeq ($(NEED_VENDORED_SDL)$(NEED_VENDORED_MIXER)$(NEED_VENDORED_NET),000)
-    # Use system dependencies
-    SDL_CONFIG = sdl-config
-    ENV_SETUP = 
-else
-    # At least one dependency is missing, set up local paths
-    SDL_CONFIG = $(VENDORED_PREFIX)/bin/sdl-config
-    export PATH := $(VENDORED_PREFIX)/bin:$(PATH)
-    export PKG_CONFIG_PATH := $(VENDORED_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
-    export LDFLAGS := -L$(VENDORED_PREFIX)/lib $(LDFLAGS)
-    export CPPFLAGS := -I$(VENDORED_PREFIX)/include $(CPPFLAGS)
+# If anything is missing, we might need vendor-deps
+ifneq ($(NEED_VENDORED_SDL)$(NEED_VENDORED_MIXER)$(NEED_VENDORED_NET),000)
     VENDORED_TARGETS = vendor-deps
+endif
+
+# Paths for the build phase
+# We add VENDORED_PREFIX to paths ALWAYS if we are in vendored mode, 
+# but we must be careful not to break if it doesn't exist yet.
+export PATH := $(VENDORED_PREFIX)/bin:$(PATH)
+export PKG_CONFIG_PATH := $(VENDORED_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
+export LDFLAGS := -L$(VENDORED_PREFIX)/lib $(LDFLAGS)
+export CPPFLAGS := -I$(VENDORED_PREFIX)/include $(CPPFLAGS)
+
+# Final SDL_CONFIG to use for psdoom-ng build
+ifeq ($(NEED_VENDORED_SDL),1)
+    SDL_CONFIG_CMD = $(VENDORED_PREFIX)/bin/sdl-config
+else
+    SDL_CONFIG_CMD = sdl-config
 endif
 
 .PHONY: all build install uninstall clean vendor-deps check-tools
@@ -73,22 +76,22 @@ check-tools:
 	@command -v git >/dev/null 2>&1 || (echo "ERROR: git not found." && exit 1)
 	@command -v curl >/dev/null 2>&1 || (echo "ERROR: curl not found." && exit 1)
 
-# Target to build all missing dependencies
+# Target to build missing dependencies sequentially
 vendor-deps: $(BUILD_DIR)
 	@mkdir -p $(VENDORED_PREFIX)
-	# SDL 1.2
+	# 1. Build SDL 1.2 first (others depend on it)
 	@if [ "$(NEED_VENDORED_SDL)" = "1" ] && [ ! -f "$(VENDORED_PREFIX)/bin/sdl-config" ]; then \
 		echo "Building vendored SDL 1.2..."; \
 		curl -L $(SDL_URL) | tar xz -C $(BUILD_DIR); \
 		cd $(BUILD_DIR)/SDL-1.2.15 && ./configure --prefix=$(VENDORED_PREFIX) --disable-video-x11 && $(MAKE) install; \
 	fi
-	# SDL_mixer
+	# 2. Build SDL_mixer
 	@if [ "$(NEED_VENDORED_MIXER)" = "1" ] && [ ! -f "$(VENDORED_PREFIX)/lib/libSDL_mixer.a" ]; then \
 		echo "Building vendored SDL_mixer..."; \
 		curl -L $(SDL_MIXER_URL) | tar xz -C $(BUILD_DIR); \
 		cd $(BUILD_DIR)/SDL_mixer-1.2.12 && ./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) && $(MAKE) install; \
 	fi
-	# SDL_net
+	# 3. Build SDL_net
 	@if [ "$(NEED_VENDORED_NET)" = "1" ] && [ ! -f "$(VENDORED_PREFIX)/lib/libSDL_net.a" ]; then \
 		echo "Building vendored SDL_net..."; \
 		curl -L $(SDL_NET_URL) | tar xz -C $(BUILD_DIR); \
@@ -104,9 +107,9 @@ build: $(BUILD_DIR)
 		echo "Applying Kubernetes patches..."; \
 		cd $(BUILD_DIR)/psdoom-ng && patch -p1 < ../../patches/psdoom-k8s.patch && touch .patched; \
 	fi
-	@echo "Building psdoom-ng (SDL_CONFIG=$(SDL_CONFIG))..."
+	@echo "Building psdoom-ng (SDL_CONFIG=$(SDL_CONFIG_CMD))..."
 	@cd $(BUILD_DIR)/psdoom-ng/trunk && \
-		./configure --prefix=$(VENDORED_PREFIX) SDL_CONFIG=$(SDL_CONFIG) && \
+		./configure --prefix=$(VENDORED_PREFIX) SDL_CONFIG=$(SDL_CONFIG_CMD) && \
 		$(MAKE)
 
 $(BUILD_DIR):
