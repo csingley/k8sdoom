@@ -128,6 +128,40 @@ index f109737..bc18155 100644
  
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
+diff --git a/trunk/src/d_main.c b/trunk/src/d_main.c
+index 125d27b..662d1c9 100644
+--- a/trunk/src/d_main.c
++++ b/trunk/src/d_main.c
+@@ -1232,29 +1232,6 @@ void D_DoomMain (void)
+ 
+     DEH_printf("W_Init: Init WADfiles.\n");
+     D_AddFile(iwadfile);
+-   
+-// *** PID BEGIN ***
+-// If the command-line flag to suppress auto-loading of custom
+-// ps management levels is *not* there, load the appropriate level.
+-    p = M_CheckParm ("-nopslev");
+-    if (p)
+-    {
+-// Add psdoom1.wad if this is registered (Doom 1) or retail (Ultimite Doom).
+-// If we loaded it, set the flag to true so we can place the monsters in the
+-// correct positions.
+-		if ( gamemode == registered || gamemode == retail ){
+-			D_AddFile(iwadfile);
+-			ps_level_loaded = true;
+-		}
+-// Add psdoom2.wad if this is commercial (Doom 2) and not an add-on pack.
+-// If we loaded it, set the flag to true so we can place the monsters in the
+-// correct positions.
+-		if ( gamemode == commercial && gamemission == doom2 ) {
+-			D_AddFile(iwadfile);
+-			ps_level_loaded = true;
+-		}
+-    }
+-// *** PID END ***
+  
+ 
+ #ifdef FEATURE_WAD_MERGE
 diff --git a/trunk/src/p_inter.c b/trunk/src/p_inter.c
 index d031102..641f455 100644
 --- a/trunk/src/p_inter.c
