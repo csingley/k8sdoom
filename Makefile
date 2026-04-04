@@ -17,7 +17,7 @@ SDL_MIXER_URL = https://www.libsdl.org/projects/SDL_mixer/release/SDL_mixer-1.2.
 SDL_NET_URL = https://www.libsdl.org/projects/SDL_net/release/SDL_net-1.2.8.tar.gz
 
 # Build paths (Absolute)
-CWD = $(shell pwd)
+CWD = $(CURDIR)
 BUILD_DIR = $(CWD)/build_tmp
 VENDORED_PREFIX = $(CWD)/build_tmp/deps_install
 INSTALLED_DEPS_TRACKER = $(CWD)/.installed_deps
@@ -66,30 +66,30 @@ deps-install:
 		command -v brew >/dev/null 2>&1 || (echo "Homebrew required for macOS auto-install." && exit 1); \
 		if ! pkg-config --exists sdl2; then \
 			echo "Installing SDL2 via Homebrew..."; \
-			brew install sdl2 && echo "sdl2" >> $(INSTALLED_DEPS_TRACKER); \
+			brew install sdl2 && echo "sdl2" >> "$(INSTALLED_DEPS_TRACKER)"; \
 		fi; \
 		if ! command -v cmake >/dev/null 2>&1; then \
 			echo "Installing CMake via Homebrew..."; \
-			brew install cmake && echo "cmake" >> $(INSTALLED_DEPS_TRACKER); \
+			brew install cmake && echo "cmake" >> "$(INSTALLED_DEPS_TRACKER)"; \
 		fi; \
 	elif [ "$(UNAME_S)" = "Linux" ]; then \
 		if command -v apt-get >/dev/null 2>&1; then \
 			if ! pkg-config --exists sdl2; then \
 				echo "Installing libsdl2-dev via APT..."; \
-				sudo apt-get update && sudo apt-get install -y libsdl2-dev && echo "libsdl2-dev" >> $(INSTALLED_DEPS_TRACKER); \
+				sudo apt-get update && sudo apt-get install -y libsdl2-dev && echo "libsdl2-dev" >> "$(INSTALLED_DEPS_TRACKER)"; \
 			fi; \
 			if ! command -v cmake >/dev/null 2>&1; then \
 				echo "Installing cmake via APT..."; \
-				sudo apt-get install -y cmake && echo "cmake" >> $(INSTALLED_DEPS_TRACKER); \
+				sudo apt-get install -y cmake && echo "cmake" >> "$(INSTALLED_DEPS_TRACKER)"; \
 			fi; \
 		elif command -v pacman >/dev/null 2>&1; then \
 			if ! pkg-config --exists sdl2; then \
 				echo "Installing sdl2 via Pacman..."; \
-				sudo pacman -S --noconfirm sdl2 && echo "sdl2" >> $(INSTALLED_DEPS_TRACKER); \
+				sudo pacman -S --noconfirm sdl2 && echo "sdl2" >> "$(INSTALLED_DEPS_TRACKER)"; \
 			fi; \
 			if ! command -v cmake >/dev/null 2>&1; then \
 				echo "Installing cmake via Pacman..."; \
-				sudo pacman -S --noconfirm cmake && echo "cmake" >> $(INSTALLED_DEPS_TRACKER); \
+				sudo pacman -S --noconfirm cmake && echo "cmake" >> "$(INSTALLED_DEPS_TRACKER)"; \
 			fi; \
 		fi; \
 	fi
@@ -104,8 +104,8 @@ deps-uninstall:
 				if command -v apt-get >/dev/null 2>&1; then sudo apt-get purge -y $$p; \
 				elif command -v pacman >/dev/null 2>&1; then sudo pacman -Rs --noconfirm $$p; fi; \
 			fi; \
-		done < $(INSTALLED_DEPS_TRACKER); \
-		rm -f $(INSTALLED_DEPS_TRACKER); \
+		done < "$(INSTALLED_DEPS_TRACKER)"; \
+		rm -f "$(INSTALLED_DEPS_TRACKER)"; \
 	fi
 
 check-tools:
@@ -116,43 +116,48 @@ check-tools:
 
 $(VENDORED_PREFIX)/bin/sdl-config:
 	@echo "Building sdl12-compat..."
-	@mkdir -p $(BUILD_DIR) $(VENDORED_PREFIX)
-	@curl -L $(SDL12_COMPAT_URL) | tar xz -C $(BUILD_DIR)
-	@cd $(BUILD_DIR)/sdl12-compat-* && \
-		cmake -B build -DCMAKE_INSTALL_PREFIX=$(VENDORED_PREFIX) -DSDL12COMPAT_STATIC=ON && \
+	@mkdir -p "$(BUILD_DIR)" "$(VENDORED_PREFIX)"
+	@curl -L $(SDL12_COMPAT_URL) | tar xz -C "$(BUILD_DIR)"
+	@cd "$(BUILD_DIR)"/sdl12-compat-* && \
+		cmake -B build -DCMAKE_INSTALL_PREFIX="$(VENDORED_PREFIX)" -DSDL12COMPAT_STATIC=ON && \
 		cmake --build build --target install
 
 $(VENDORED_PREFIX)/lib/libSDL_mixer.a: $(SDL_DEP)
 	@echo "Building SDL_mixer..."
-	@curl -L $(SDL_MIXER_URL) | tar xz -C $(BUILD_DIR)
-	@cd $(BUILD_DIR)/SDL_mixer-1.2.12 && \
+	@mkdir -p "$(BUILD_DIR)" "$(VENDORED_PREFIX)"
+	@curl -L $(SDL_MIXER_URL) | tar xz -C "$(BUILD_DIR)"
+	@cd "$(BUILD_DIR)"/SDL_mixer-1.2.12 && \
 		PATH="$(V_PATH)" PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" SDL_CONFIG="$(SDL_CONFIG)" \
-		./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) \
+		./configure --prefix="$(VENDORED_PREFIX)" --with-sdl-prefix="$(VENDORED_PREFIX)" \
 		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && \
 		$(MAKE) install
 
 $(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
 	@echo "Building SDL_net..."
-	@curl -L $(SDL_NET_URL) | tar xz -C $(BUILD_DIR)
-	@cd $(BUILD_DIR)/SDL_net-1.2.8 && \
+	@mkdir -p "$(BUILD_DIR)" "$(VENDORED_PREFIX)"
+	@curl -L $(SDL_NET_URL) | tar xz -C "$(BUILD_DIR)"
+	@cd "$(BUILD_DIR)"/SDL_net-1.2.8 && \
 		PATH="$(V_PATH)" PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" SDL_CONFIG="$(SDL_CONFIG)" \
-		./configure --prefix=$(VENDORED_PREFIX) --with-sdl-prefix=$(VENDORED_PREFIX) \
+		./configure --prefix="$(VENDORED_PREFIX)" --with-sdl-prefix="$(VENDORED_PREFIX)" \
 		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && \
 		$(MAKE) install
 
 # --- Main Build ---
 
-build: $(SDL_DEP) $(MIXER_DEP) $(NET_DEP)
+$(BUILD_DIR):
+	@mkdir -p "$(BUILD_DIR)"
+
+build: $(BUILD_DIR) $(SDL_DEP) $(MIXER_DEP) $(NET_DEP)
 	@if [ ! -d "$(BUILD_DIR)/psdoom-ng" ]; then \
-		git clone $(PSDOOM_REPO) $(BUILD_DIR)/psdoom-ng; \
+		git clone $(PSDOOM_REPO) "$(BUILD_DIR)/psdoom-ng"; \
 	fi
 	@if [ ! -f "$(BUILD_DIR)/psdoom-ng/.patched" ]; then \
-		cd $(BUILD_DIR)/psdoom-ng && patch -p1 < ../../patches/psdoom-k8s.patch && touch .patched; \
+		cd "$(BUILD_DIR)/psdoom-ng" && patch -p1 < ../../patches/psdoom-k8s.patch && touch .patched; \
 	fi
 	@echo "Building psdoom-ng..."
-	@cd $(BUILD_DIR)/psdoom-ng/trunk && \
+	@cd "$(BUILD_DIR)/psdoom-ng/trunk" && \
 		PATH="$(V_PATH)" PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" SDL_CONFIG="$(SDL_CONFIG)" \
-		./configure --prefix=$(PREFIX) \
+		./configure --prefix="$(PREFIX)" \
 		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" \
 		LIBS="-lSDL_mixer -lSDL_net" && \
 		$(MAKE)
@@ -166,19 +171,19 @@ $(WAD_NAME):
 	@unzip -j freedoom-0.13.0.zip "freedoom-0.13.0/$(WAD_NAME)" -d .
 
 install: build $(WAD_NAME)
-	@mkdir -p $(BINDIR) $(DATADIR)
-	@cp $(BUILD_DIR)/psdoom-ng/trunk/src/psdoom-ng $(BINDIR)/psdoom-ng
-	@cp k8s-poll.sh $(DATADIR)/k8s-poll.sh
-	@chmod +x $(DATADIR)/k8s-poll.sh
-	@cp $(WAD_NAME) $(DATADIR)/$(WAD_NAME)
-	@cp k8sdoom.sh $(BINDIR)/k8sdoom
-	@chmod +x $(BINDIR)/k8sdoom
+	@mkdir -p "$(BINDIR)" "$(DATADIR)"
+	@cp "$(BUILD_DIR)/psdoom-ng/trunk/src/psdoom-ng" "$(BINDIR)/psdoom-ng"
+	@cp k8s-poll.sh "$(DATADIR)/k8s-poll.sh"
+	@chmod +x "$(DATADIR)/k8s-poll.sh"
+	@cp "$(WAD_NAME)" "$(DATADIR)/$(WAD_NAME)"
+	@cp k8sdoom.sh "$(BINDIR)/k8sdoom"
+	@chmod +x "$(BINDIR)/k8sdoom"
 	@echo "Installation complete. Run 'k8sdoom' to start."
 
 uninstall: deps-uninstall
 	@echo "Removing k8sdoom binaries and assets..."
-	rm -f $(BINDIR)/psdoom-ng $(BINDIR)/k8sdoom
-	rm -rf $(DATADIR)
+	rm -f "$(BINDIR)/psdoom-ng" "$(BINDIR)/k8sdoom"
+	rm -rf "$(DATADIR)"
 
 clean:
-	rm -rf $(BUILD_DIR) freedoom-0.13.0.zip $(WAD_NAME)
+	rm -rf "$(BUILD_DIR)" freedoom-0.13.0.zip "$(WAD_NAME)"
