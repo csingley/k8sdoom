@@ -49,10 +49,22 @@ ifeq ($(NET_EXISTS),)
     NET_DEP = $(VENDORED_PREFIX)/lib/libSDL_net.a
 endif
 
+# Build environment variables
 V_PATH = $(VENDORED_PREFIX)/bin:$(PATH)
 V_PKG_CONFIG_PATH = $(VENDORED_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
 V_LDFLAGS = -L$(VENDORED_PREFIX)/lib $(LDFLAGS)
-V_CPPFLAGS = -I$(VENDORED_PREFIX)/include $(CPPFLAGS)
+V_CPPFLAGS = -I$(VENDORED_PREFIX)/include -I$(VENDORED_PREFIX)/include/SDL $(CPPFLAGS)
+V_LD_PATH = $(VENDORED_PREFIX)/lib:$(LD_LIBRARY_PATH)
+V_DYLD_PATH = $(VENDORED_PREFIX)/lib:$(DYLD_LIBRARY_PATH)
+
+# execution wrapper for build steps
+V_ENV = PATH="$(V_PATH)" \
+        PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" \
+        SDL_CONFIG="$(SDL_CONFIG)" \
+        LD_LIBRARY_PATH="$(V_LD_PATH)" \
+        DYLD_LIBRARY_PATH="$(V_DYLD_PATH)" \
+        LDFLAGS="$(V_LDFLAGS)" \
+        CPPFLAGS="$(V_CPPFLAGS)"
 
 .PHONY: all build install uninstall clean check-tools deps-install deps-uninstall
 
@@ -127,9 +139,7 @@ $(VENDORED_PREFIX)/lib/libSDL_mixer.a: $(SDL_DEP)
 	@mkdir -p "$(BUILD_DIR)" "$(VENDORED_PREFIX)"
 	@curl -L $(SDL_MIXER_URL) | tar xz -C "$(BUILD_DIR)"
 	@cd "$(BUILD_DIR)"/SDL_mixer-1.2.12 && \
-		PATH="$(V_PATH)" PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" SDL_CONFIG="$(SDL_CONFIG)" \
-		./configure --prefix="$(VENDORED_PREFIX)" --with-sdl-prefix="$(VENDORED_PREFIX)" \
-		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && \
+		$(V_ENV) ./configure --prefix="$(VENDORED_PREFIX)" --with-sdl-prefix="$(VENDORED_PREFIX)" && \
 		$(MAKE) install
 
 $(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
@@ -137,9 +147,7 @@ $(VENDORED_PREFIX)/lib/libSDL_net.a: $(SDL_DEP)
 	@mkdir -p "$(BUILD_DIR)" "$(VENDORED_PREFIX)"
 	@curl -L $(SDL_NET_URL) | tar xz -C "$(BUILD_DIR)"
 	@cd "$(BUILD_DIR)"/SDL_net-1.2.8 && \
-		PATH="$(V_PATH)" PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" SDL_CONFIG="$(SDL_CONFIG)" \
-		./configure --prefix="$(VENDORED_PREFIX)" --with-sdl-prefix="$(VENDORED_PREFIX)" \
-		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" && \
+		$(V_ENV) ./configure --prefix="$(VENDORED_PREFIX)" --with-sdl-prefix="$(VENDORED_PREFIX)" && \
 		$(MAKE) install
 
 # --- Main Build ---
@@ -156,9 +164,7 @@ build: $(BUILD_DIR) $(SDL_DEP) $(MIXER_DEP) $(NET_DEP)
 	fi
 	@echo "Building psdoom-ng..."
 	@cd "$(BUILD_DIR)/psdoom-ng/trunk" && \
-		PATH="$(V_PATH)" PKG_CONFIG_PATH="$(V_PKG_CONFIG_PATH)" SDL_CONFIG="$(SDL_CONFIG)" \
-		./configure --prefix="$(PREFIX)" \
-		LDFLAGS="$(V_LDFLAGS)" CPPFLAGS="$(V_CPPFLAGS)" \
+		$(V_ENV) ./configure --prefix="$(PREFIX)" \
 		LIBS="-lSDL_mixer -lSDL_net" && \
 		$(MAKE)
 
