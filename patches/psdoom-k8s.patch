@@ -164,7 +164,7 @@ index 0789754..84fffa2 100644
      // Need more variables for advanced process management:
  
 diff --git a/trunk/src/pr_process.c b/trunk/src/pr_process.c
-index fa4fe83..bec4bc8 100644
+index fa4fe83..a600838 100644
 --- a/trunk/src/pr_process.c
 +++ b/trunk/src/pr_process.c
 @@ -38,10 +38,10 @@ void P_KillMobj(mobj_t *source, mobj_t *target); /* from p_inter.c */
@@ -189,13 +189,38 @@ index fa4fe83..bec4bc8 100644
    char *custompscmd = NULL;
  
  // Bypass the 'ps' part of the program entirely if it's an add-on pack
-@@ -140,12 +140,12 @@ void pr_check(void) {
+@@ -116,20 +116,7 @@ void pr_check(void) {
+ // Now that we know we should run 'ps', do it!
+ 
+   if ((custompscmd=getenv("PSDOOMPSCMD")) != NULL) { 
+-  /* 
+-    The external command must return one line per process with:
+-
+-    user pid processname daemon=1/0
+-
+-    For example:
+-
+-    keymon 29 web4 1
+-    keymon 30 web3 1
+-    keymon 31 adis3 1
+-    keymon 32 core15 1
+-    keymon 20 core2 1
+-
+-  */
++    fprintf(stderr, "DEBUG: Executing poller: %s\n", custompscmd);
+     f = popen(custompscmd, "r");
+ 
+     if (!f) {
+@@ -139,19 +126,22 @@ void pr_check(void) {
+ 
      /* Read in all process information. */
      while (fgets(buf, 255, f)) {
++       fprintf(stderr, "DEBUG: Parsing line: %s", buf);
         int read_fields = sscanf(buf, "%s %d %s %d",
 -             username, &pid, namebuf, &demon);
 +             username, &pid, namebuf, &type);
         if (read_fields == 4 && username && namebuf) {
++         fprintf(stderr, "DEBUG: Adding node %s (PID %d)\n", namebuf, pid);
           // Check for username validity before adding to pid list.
           if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
                !(in_ps_userlist(psnotuser_list_head, username)) ) {
@@ -204,7 +229,14 @@ index fa4fe83..bec4bc8 100644
           }
         } else {
          fprintf(stderr, "ERROR: can not parse '%s'\n", buf);
-@@ -184,15 +184,15 @@ root       334  0.0  1.2   848   476   2 R    20:06   0:00 ps h a x u OT
+        }
+     }
+     pclose(f);
++    fprintf(stderr, "DEBUG: Poller finished.\n");
+ 
+   } else {
+ // Split the running of 'ps' into operating system-specific sections to
+@@ -184,15 +174,15 @@ root       334  0.0  1.2   848   476   2 R    20:06   0:00 ps h a x u OT
           // Check for username validity before adding to pid list.
           if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
                !(in_ps_userlist(psnotuser_list_head, username)) ) {
@@ -223,7 +255,7 @@ index fa4fe83..bec4bc8 100644
      }
      pclose(f);
  
-@@ -234,13 +234,13 @@ root    321   2  -bash
+@@ -234,13 +224,13 @@ root    321   2  -bash
        sscanf(buf, "%s %d %s %s",
                     username, &pid, tty, namebuf);
        if (tty[0]=='?')  /* if there is no tty, then it is a daemon */
@@ -240,7 +272,7 @@ index fa4fe83..bec4bc8 100644
        }
      }
      pclose(f);
-@@ -262,15 +262,15 @@ root    321   2  -bash
+@@ -262,15 +252,15 @@ root    321   2  -bash
           // Check for username validity before adding to pid list.
           if ( (psallusers || in_ps_userlist(psuser_list_head, username)) &&
                !(in_ps_userlist(psnotuser_list_head, username)) ) {
@@ -259,7 +291,7 @@ index fa4fe83..bec4bc8 100644
      }
  
      pclose(f);
-@@ -298,7 +298,7 @@ root    321   2  -bash
+@@ -298,7 +288,7 @@ root    321   2  -bash
  // the archvile does (because the process didn't really die).
  // If we can't resurrect it in that case, remove the body and spawn
  // a new monster.
@@ -268,7 +300,7 @@ index fa4fe83..bec4bc8 100644
  
     mobj_t	*new_mobj = NULL;
     int		name_length = 0;
-@@ -308,7 +308,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+@@ -308,7 +298,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
  // pid currently in the list, spawn the mobj and link it as the tail
  // of the list if we placed it on the map without a collision.
     if ( pid_list_tail && pid > pid_list_tail->m_pid ) {
@@ -277,7 +309,7 @@ index fa4fe83..bec4bc8 100644
           new_mobj->ppid = pid_list_tail;
           new_mobj->npid = NULL;
           pid_list_tail->npid = new_mobj;
-@@ -319,7 +319,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+@@ -319,7 +309,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
  // pid currently in the list, spawn the mobj and link it as the head
  // of the list if we placed it on the map without a collision.
     } else if ( pid_list_head && pid < pid_list_head->m_pid ) {
@@ -286,7 +318,7 @@ index fa4fe83..bec4bc8 100644
           new_mobj->ppid = NULL;
           new_mobj->npid = pid_list_head;
           pid_list_head->ppid = new_mobj;
-@@ -357,17 +357,8 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+@@ -357,17 +347,8 @@ void add_to_pid_list(int pid, const char *name, int demon) {
              pid_list_pos->m_del_from_pid_list = false;
  
              // copy the incoming pid's name over the mobj's name
@@ -306,7 +338,7 @@ index fa4fe83..bec4bc8 100644
  
              // if the process is still running on the machine, but
              // the mobj has been killed in Doom (ie. the process
-@@ -416,7 +407,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+@@ -416,7 +397,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
                    cleanup_pid_list(pid_list_pos);
  
                    // try to respawn monster
@@ -315,7 +347,7 @@ index fa4fe83..bec4bc8 100644
  
                 } else {  // we can raise the monster's body
  
-@@ -447,7 +438,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+@@ -447,7 +428,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
           } else {  // the read-in pid is smaller than the currently
                     // pointed to mobj.  spawn a new mobj and link it
                     // into the list if it is placed without a collision.
@@ -324,7 +356,7 @@ index fa4fe83..bec4bc8 100644
                 new_mobj->ppid = pid_list_pos->ppid;
                 new_mobj->npid = pid_list_pos;
                 pid_list_pos->ppid->npid = new_mobj;
-@@ -457,7 +448,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
+@@ -457,7 +438,7 @@ void add_to_pid_list(int pid, const char *name, int demon) {
           }
        } else {  // empty list.  spawn the mobj and make it the only
                  // member of the list if it is placed without a collision.
@@ -333,7 +365,7 @@ index fa4fe83..bec4bc8 100644
              pid_list_head = pid_list_tail = new_mobj;
              new_mobj->npid = new_mobj->ppid = NULL;
              new_mobj->m_del_from_pid_list = false;
-@@ -568,7 +559,7 @@ void cleanup_pid_list(mobj_t *del_mobj) {
+@@ -568,7 +549,7 @@ void cleanup_pid_list(mobj_t *del_mobj) {
  // Need to return the newly created mobj_t from this routine, or
  // NULL if the monster couldn't be spawned due to collisions.
  //
@@ -342,7 +374,7 @@ index fa4fe83..bec4bc8 100644
  
      mapthing_t	mt_ext;
  
-@@ -598,17 +589,24 @@ mobj_t *add_new_process(int pid, const char *pname, int demon) {
+@@ -598,17 +579,24 @@ mobj_t *add_new_process(int pid, const char *pname, int demon) {
  // Only assigned >= 0 if on a custom level.
      short		box_num = -1;
  
@@ -373,7 +405,7 @@ index fa4fe83..bec4bc8 100644
      //mt_ext.flags = 7;
      //mt_ext.flags |= (MTF_SINGLE | MTF_COOPERATIVE | MTF_DEATHMATCH);
  
-@@ -736,17 +734,10 @@ mobj_t *add_new_process(int pid, const char *pname, int demon) {
+@@ -736,17 +724,10 @@ mobj_t *add_new_process(int pid, const char *pname, int demon) {
  	}
  
  // If we spawned the monster without collisions
@@ -394,7 +426,7 @@ index fa4fe83..bec4bc8 100644
  
         pid_mobj->m_pid = pid;
  
-@@ -861,7 +852,7 @@ boolean in_ps_userlist(ps_userlist_t *list_head, char *username) {
+@@ -861,7 +842,7 @@ boolean in_ps_userlist(ps_userlist_t *list_head, char *username) {
  
  // pr_kill
  // kills the process
@@ -403,7 +435,7 @@ index fa4fe83..bec4bc8 100644
    char buf[256];
    char *cmd;
  // If -nopsact was on the command line, don't actually kill the process
-@@ -869,15 +860,15 @@ void pr_kill(int pid) {
+@@ -869,15 +850,15 @@ void pr_kill(int pid) {
       return;
    }
    if ((cmd = getenv("PSDOOMKILLCMD")) == NULL) {
@@ -422,7 +454,7 @@ index fa4fe83..bec4bc8 100644
    char buf[256];
    char *cmd;
  // If -nopsact was on the command line, don't actually re-nice the process
-@@ -885,8 +876,10 @@ void pr_renice(int pid) {
+@@ -885,8 +866,10 @@ void pr_renice(int pid) {
       return;
    }
    if ((cmd = getenv("PSDOOMRENICECMD")) == NULL) {
