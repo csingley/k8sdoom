@@ -494,10 +494,41 @@ index e4381a2..97594ea 100644
      // Need another variable for advanced process management:
      // A flag to tell whether to draw the pid info.
 diff --git a/trunk/src/r_things.c b/trunk/src/r_things.c
-index e60ec34..87a2fbb 100644
+index e60ec34..cf317e6 100644
 --- a/trunk/src/r_things.c
 +++ b/trunk/src/r_things.c
-@@ -523,11 +523,12 @@ R_DrawVisSprite
+@@ -334,15 +334,27 @@ vissprite_t	overflowsprite;
+ 
+ vissprite_t* R_NewVisSprite (void)
+ {
++    vissprite_t *vis;
++
+     if (vissprite_p == &vissprites[MAXVISSPRITES])
+-	return &overflowsprite;
+-    
++	return &vissprites[0];
++
++    vis = vissprite_p;
+     vissprite_p++;
+-    return vissprite_p-1;
++
++    // *** PID BEGIN ***
++    // Initialize new fields to prevent drawing garbage
++    vis->m_pid = 0;
++    vis->m_draw_pid_info = false;
++    memset(vis->m_pname, 0, 64);
++    // *** PID END ***
++
++    return vis;
+ }
+ 
+ 
+ 
++
+ //
+ // R_DrawMaskedColumn
+ // Used for sprites and masked mid textures.
+@@ -523,11 +535,12 @@ R_DrawVisSprite
         char buf[16];
         sprintf(buf, "%d", vis->m_pid);
  
@@ -515,7 +546,7 @@ index e60ec34..87a2fbb 100644
         M_WriteText(vis->x1, lowest_dc_yl, buf);
         M_WriteText(vis->x1, lowest_dc_yl + 6, vis->m_pname);
      }
-@@ -643,7 +644,7 @@ void R_ProjectSprite (mobj_t* thing)
+@@ -643,7 +656,7 @@ void R_ProjectSprite (mobj_t* thing)
  // *** PID BEGIN ***
  // Set the pid and name in the vissprite.
      vis->m_pid = thing->m_pid;
