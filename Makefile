@@ -52,8 +52,8 @@ endif
 # Build environment variables
 V_PATH = $(VENDORED_PREFIX)/bin:$(PATH)
 V_PKG_CONFIG_PATH = $(VENDORED_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
-V_LDFLAGS = -L$(VENDORED_PREFIX)/lib $(LDFLAGS)
-V_CPPFLAGS = -I$(VENDORED_PREFIX)/include -I$(VENDORED_PREFIX)/include/SDL $(CPPFLAGS)
+V_LDFLAGS = -L"$(VENDORED_PREFIX)/lib" -Wl,-rpath,"$(VENDORED_PREFIX)/lib" $(LDFLAGS)
+V_CPPFLAGS = -I"$(VENDORED_PREFIX)/include" -I"$(VENDORED_PREFIX)/include/SDL" $(CPPFLAGS)
 V_LD_PATH = $(VENDORED_PREFIX)/lib:$(LD_LIBRARY_PATH)
 V_DYLD_PATH = $(VENDORED_PREFIX)/lib:$(DYLD_LIBRARY_PATH)
 
@@ -178,7 +178,7 @@ $(WAD_NAME):
 
 install: build $(WAD_NAME)
 	@mkdir -p "$(BINDIR)" "$(DATADIR)"
-	@cp "$(BUILD_DIR)/psdoom-ng/trunk/src/psdoom-ng" "$(BINDIR)/psdoom-ng"
+	@cp "$(BUILD_DIR)/psdoom-ng/trunk/src/psdoom" "$(BINDIR)/psdoom-ng"
 	@cp k8s-poll.sh "$(DATADIR)/k8s-poll.sh"
 	@chmod +x "$(DATADIR)/k8s-poll.sh"
 	@cp "$(WAD_NAME)" "$(DATADIR)/$(WAD_NAME)"
