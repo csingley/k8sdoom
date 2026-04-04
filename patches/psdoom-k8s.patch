@@ -1,3 +1,133 @@
+diff --git a/trunk/src/Makefile b/trunk/src/Makefile
+index f109737..bc18155 100644
+--- a/trunk/src/Makefile
++++ b/trunk/src/Makefile
+@@ -179,38 +179,38 @@ DATA = $(app_DATA) $(screensaver_DATA)
+ ETAGS = etags
+ CTAGS = ctags
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+-ACLOCAL = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/missing --run aclocal-1.11
+-AMTAR = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/missing --run tar
+-AUTOCONF = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/missing --run autoconf
+-AUTOHEADER = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/missing --run autoheader
+-AUTOMAKE = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/missing --run automake-1.11
++ACLOCAL = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/missing --run aclocal-1.11
++AMTAR = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/missing --run tar
++AUTOCONF = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/missing --run autoconf
++AUTOHEADER = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/missing --run autoheader
++AUTOMAKE = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/missing --run automake-1.11
+ AWK = gawk
+ CC = gcc
+ CCDEPMODE = depmode=gcc3
+-CFLAGS = -O2 -g -Wall  -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
++CFLAGS = -O2 -g -Wall  -I/home/csingley/Code/k8sdoom/build_tmp/deps_install/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+ CPP = gcc -E
+-CPPFLAGS = 
++CPPFLAGS = -I/home/csingley/Code/k8sdoom/build_tmp/deps_install/include -I/home/csingley/Code/k8sdoom/build_tmp/deps_install/include/SDL 
+ CYGPATH_W = echo
+ DEFS = -DHAVE_CONFIG_H
+ DEPDIR = .deps
+ ECHO_C = 
+ ECHO_N = -n
+ ECHO_T = 
+-EGREP = /bin/grep -E
++EGREP = /usr/bin/grep -E
+ EXEEXT = 
+-GREP = /bin/grep
++GREP = /usr/bin/grep
+ HAVE_PYTHON = true
+ INSTALL = /usr/bin/install -c
+ INSTALL_DATA = ${INSTALL} -m 644
+ INSTALL_PROGRAM = ${INSTALL}
+ INSTALL_SCRIPT = ${INSTALL}
+ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
+-LDFLAGS =  -lSDL -lpthread
++LDFLAGS = -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib  -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib -lSDL
+ LIBOBJS = 
+-LIBS = -lm 
++LIBS = -lm -lsamplerate -lSDL_mixer -lSDL_net
+ LTLIBOBJS = 
+-MAKEINFO = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/missing --run makeinfo
+-MKDIR_P = /bin/mkdir -p
++MAKEINFO = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/missing --run makeinfo
++MKDIR_P = /usr/bin/mkdir -p
+ OBJEXT = o
+ PACKAGE = psdoom
+ PACKAGE_BUGREPORT = orsonteodoro@yahoo.com
+@@ -230,19 +230,19 @@ SDLMIXER_CFLAGS =
+ SDLMIXER_LIBS =  -lSDL_mixer
+ SDLNET_CFLAGS = 
+ SDLNET_LIBS =  -lSDL_net
+-SDL_CFLAGS = -I/usr/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
+-SDL_CONFIG = /usr/bin/sdl-config
+-SDL_LIBS = -lSDL -lpthread
++SDL_CFLAGS = -I/home/csingley/Code/k8sdoom/build_tmp/deps_install/include/SDL -D_GNU_SOURCE=1 -D_REENTRANT
++SDL_CONFIG = /home/csingley/Code/k8sdoom/build_tmp/deps_install/bin/sdl-config
++SDL_LIBS = -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib -lSDL
+ SET_MAKE = 
+ SHELL = /bin/sh
+ STRIP = strip
+ VERSION = 2012.02.05-1.6.0
+ WINDOWS_RC_VERSION = 2012, 02, 05-1, 6, 0, 0
+ WINDRES = 
+-abs_builddir = /home/orson/Downloads/chocolate-doom-1.6.0/src
+-abs_srcdir = /home/orson/Downloads/chocolate-doom-1.6.0/src
+-abs_top_builddir = /home/orson/Downloads/chocolate-doom-1.6.0
+-abs_top_srcdir = /home/orson/Downloads/chocolate-doom-1.6.0
++abs_builddir = /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/src
++abs_srcdir = /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/src
++abs_top_builddir = /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk
++abs_top_srcdir = /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk
+ ac_aux_dir = autotools
+ ac_ct_CC = gcc
+ am__include = include
+@@ -262,16 +262,16 @@ host_alias =
+ htmldir = ${docdir}
+ includedir = ${prefix}/include
+ infodir = ${datarootdir}/info
+-install_sh = ${SHELL} /home/orson/Downloads/chocolate-doom-1.6.0/autotools/install-sh
++install_sh = ${SHELL} /home/csingley/Code/k8sdoom/build_tmp/psdoom-ng/trunk/autotools/install-sh
+ libdir = ${exec_prefix}/lib
+ libexecdir = ${exec_prefix}/libexec
+ localedir = ${datarootdir}/locale
+ localstatedir = ${prefix}/var
+ mandir = ${datarootdir}/man
+-mkdir_p = /bin/mkdir -p
++mkdir_p = /usr/bin/mkdir -p
+ oldincludedir = /usr/include
+ pdfdir = ${docdir}
+-prefix = /usr/local
++prefix = /home/csingley/.local
+ program_transform_name = s,x,x,
+ psdir = ${docdir}
+ sbindir = ${exec_prefix}/sbin
+@@ -301,7 +301,7 @@ net_structrw.c       net_structrw.h        \
+ z_native.c           z_zone.h
+ 
+ psserver_SOURCES = $(DEDSERV_FILES)
+-psserver_LDADD = ../wince/libc_wince.a  -lSDL -lpthread  -lSDL_net 
++psserver_LDADD = ../wince/libc_wince.a -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib  -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib -lSDL  -lSDL_net 
+ MAIN_SOURCE_FILES = \
+ am_map.c             am_map.h              \
+ d_englsh.h                                 \
+@@ -452,7 +452,7 @@ psdoom_LDADD = \
+                        ../textscreen/libtextscreen.a \
+                        ../pcsound/libpcsound.a       \
+                        ../opl/libopl.a               \
+-                        -lSDL -lpthread                     \
++                       -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib  -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib -lSDL                     \
+                         -lSDL_mixer               \
+                         -lSDL_net
+ 
+@@ -929,7 +929,7 @@ icon.c : ../data/doom8.ico
+ 	../data/convert-icon $^ $@
+ 
+ midiread : midifile.c
+-	$(CC) -DTEST $(CFLAGS)  -lSDL -lpthread $^ -o $@
++	$(CC) -DTEST $(CFLAGS) -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib  -L/home/csingley/Code/k8sdoom/build_tmp/deps_install/lib -lSDL $^ -o $@
+ 
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+ # Otherwise a system limit (for SysV at least) may be exceeded.
 diff --git a/trunk/src/p_inter.c b/trunk/src/p_inter.c
 index d031102..641f455 100644
 --- a/trunk/src/p_inter.c
@@ -332,10 +462,28 @@ index e4381a2..97594ea 100644
      // Need another variable for advanced process management:
      // A flag to tell whether to draw the pid info.
 diff --git a/trunk/src/r_things.c b/trunk/src/r_things.c
-index e60ec34..3e2fbe9 100644
+index e60ec34..87a2fbb 100644
 --- a/trunk/src/r_things.c
 +++ b/trunk/src/r_things.c
-@@ -643,7 +643,7 @@ void R_ProjectSprite (mobj_t* thing)
+@@ -523,11 +523,12 @@ R_DrawVisSprite
+        char buf[16];
+        sprintf(buf, "%d", vis->m_pid);
+ 
+-// Change y-placement of text to the top of the current sprite.
+-// Make sure the pid text doesn't extend onto the status bar.
+-       if ( lowest_dc_yl + 13 > viewheight ){
+-          lowest_dc_yl = viewheight - 13;
+-       }
++       // Extra safety: ensure coordinates are within reasonable bounds
++       if (vis->x1 < 0) vis->x1 = 0;
++       if (vis->x1 > SCREENWIDTH - 10) vis->x1 = SCREENWIDTH - 10;
++       if (lowest_dc_yl < 0) lowest_dc_yl = 0;
++       if (lowest_dc_yl > viewheight - 13) lowest_dc_yl = viewheight - 13;
++
+        M_WriteText(vis->x1, lowest_dc_yl, buf);
+        M_WriteText(vis->x1, lowest_dc_yl + 6, vis->m_pname);
+     }
+@@ -643,7 +644,7 @@ void R_ProjectSprite (mobj_t* thing)
  // *** PID BEGIN ***
  // Set the pid and name in the vissprite.
      vis->m_pid = thing->m_pid;

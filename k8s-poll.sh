@@ -19,6 +19,8 @@ kubectl get nodes -o json | jq -r '.items[] | [
    elif (.spec.taints[]? | select(.effect == "NoSchedule")) then 4
    else 0 end)
 ] | @tsv' | while IFS=$'\t' read -r name type; do
-  pid=$(echo "$name" | cksum | cut -d' ' -f1)
+  # Generate a stable positive integer PID from the node name
+  # CRC32 % 1,000,000 ensures it's always a small positive int
+  pid=$(echo "$name" | cksum | awk '{print ($1 % 1000000) + 1}')
   echo "k8s $pid $name $type"
 done
