@@ -129,10 +129,32 @@ index f109737..bc18155 100644
  # Tell versions [3.59,3.63) of GNU make to not export all variables.
  # Otherwise a system limit (for SysV at least) may be exceeded.
 diff --git a/trunk/src/d_main.c b/trunk/src/d_main.c
-index 125d27b..662d1c9 100644
+index 125d27b..e11b7f4 100644
 --- a/trunk/src/d_main.c
 +++ b/trunk/src/d_main.c
-@@ -1232,29 +1232,6 @@ void D_DoomMain (void)
+@@ -89,10 +89,6 @@ boolean nopsmon;  // checkparm for -nopsmon
+ boolean nopsact;  // checkparm for -nopsact
+ boolean psallusers;  // checkparm for -psallusers
+ boolean nopssafety;  // checkparm for -nopssafety
+-
+-// To automagically add psdoom1.wad and psdoom2.wad upon load.
+-static char *psdoom1wad;
+-static char *psdoom2wad;
+ // *** PID END ***
+ 
+ //
+@@ -980,10 +976,6 @@ void D_DoomMain (void)
+ #endif
+ 
+     iwadfile = D_FindIWAD();
+-// *** PID BEGIN ***
+-    psdoom1wad = D_FindWADByName("psdoom1.wad");
+-    psdoom2wad = D_FindWADByName("psdoom2.wad");
+-// *** PID END ***
+ 
+     // None found?
+ 
+@@ -1232,29 +1224,6 @@ void D_DoomMain (void)
  
      DEH_printf("W_Init: Init WADfiles.\n");
      D_AddFile(iwadfile);
@@ -528,41 +550,21 @@ index e4381a2..97594ea 100644
      // Need another variable for advanced process management:
      // A flag to tell whether to draw the pid info.
 diff --git a/trunk/src/r_things.c b/trunk/src/r_things.c
-index e60ec34..cf317e6 100644
+index e60ec34..7e13956 100644
 --- a/trunk/src/r_things.c
 +++ b/trunk/src/r_things.c
-@@ -334,15 +334,27 @@ vissprite_t	overflowsprite;
- 
+@@ -335,8 +335,8 @@ vissprite_t	overflowsprite;
  vissprite_t* R_NewVisSprite (void)
  {
-+    vissprite_t *vis;
-+
      if (vissprite_p == &vissprites[MAXVISSPRITES])
 -	return &overflowsprite;
 -    
 +	return &vissprites[0];
 +
-+    vis = vissprite_p;
      vissprite_p++;
--    return vissprite_p-1;
-+
-+    // *** PID BEGIN ***
-+    // Initialize new fields to prevent drawing garbage
-+    vis->m_pid = 0;
-+    vis->m_draw_pid_info = false;
-+    memset(vis->m_pname, 0, 64);
-+    // *** PID END ***
-+
-+    return vis;
+     return vissprite_p-1;
  }
- 
- 
- 
-+
- //
- // R_DrawMaskedColumn
- // Used for sprites and masked mid textures.
-@@ -523,11 +535,12 @@ R_DrawVisSprite
+@@ -523,11 +523,12 @@ R_DrawVisSprite
         char buf[16];
         sprintf(buf, "%d", vis->m_pid);
  
@@ -580,12 +582,30 @@ index e60ec34..cf317e6 100644
         M_WriteText(vis->x1, lowest_dc_yl, buf);
         M_WriteText(vis->x1, lowest_dc_yl + 6, vis->m_pname);
      }
-@@ -643,7 +656,7 @@ void R_ProjectSprite (mobj_t* thing)
- // *** PID BEGIN ***
- // Set the pid and name in the vissprite.
+@@ -640,13 +641,21 @@ void R_ProjectSprite (mobj_t* thing)
+     
+     // store information in a vissprite
+     vis = R_NewVisSprite ();
+-// *** PID BEGIN ***
+-// Set the pid and name in the vissprite.
++
++    // *** PID BEGIN ***
++    // Always initialize PID fields to safe defaults
++    vis->m_pid = 0;
++    vis->m_draw_pid_info = false;
++    memset(vis->m_pname, 0, 64);
++
++    // Set the pid and name in the vissprite if it's a process monster
      vis->m_pid = thing->m_pid;
 -    memcpy(vis->m_pname, thing->m_pname, 8);
-+    memcpy(vis->m_pname, thing->m_pname, 64);
- // Also set flag that tells whether to draw the pid info or not.
+-// Also set flag that tells whether to draw the pid info or not.
++    if (thing->m_pid != 0) {
++        memcpy(vis->m_pname, thing->m_pname, 64);
++    }
++    // Also set flag that tells whether to draw the pid info or not.
      vis->m_draw_pid_info = thing->m_draw_pid_info;
- // *** PID END ***
+-// *** PID END ***
++    // *** PID END ***
+     vis->mobjflags = thing->flags;
+     vis->scale = xscale<<detailshift;
+     vis->gx = thing->x;
