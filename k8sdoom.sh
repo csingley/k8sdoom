@@ -13,6 +13,11 @@ if [[ ! -f "$WAD_PATH" ]]; then
     exit 1
 fi
 
+# Ensure the directory containing this script is in the PATH
+# so it can find the psdoom-ng binary installed alongside it.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$SCRIPT_DIR:$PATH"
+
 export PSDOOMPSCMD="$POLLER_PATH"
-# Run the binary (assuming it's in the PATH as installed by make)
+# Run the binary
 psdoom-ng -iwad "$WAD_PATH" "$@"
